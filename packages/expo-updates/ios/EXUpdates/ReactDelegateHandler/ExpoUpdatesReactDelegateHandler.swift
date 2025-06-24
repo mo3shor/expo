@@ -84,12 +84,21 @@ public final class ExpoUpdatesReactDelegateHandler: ExpoReactDelegateHandler, Ap
       initialProps: self.rootViewInitialProperties,
       launchOptions: self.launchOptions
     )
-    rootView.backgroundColor = self.deferredRootView?.backgroundColor ?? UIColor.white
+
     let window = getWindow()
     let rootViewController = reactDelegate.createRootViewController()
+#if os(iOS) || os(tvOS)
+    rootView.backgroundColor = self.deferredRootView?.backgroundColor ?? UIColor.white
     rootViewController.view = rootView
     window.rootViewController = rootViewController
     window.makeKeyAndVisible()
+#else
+    rootViewController.view = rootView
+    rootView.frame = window.frame
+    window.contentViewController = rootViewController
+    window.makeKeyAndOrderFront(self)
+    window.center()
+#endif
 
     self.cleanup()
   }
@@ -127,9 +136,15 @@ public final class ExpoUpdatesReactDelegateHandler: ExpoReactDelegateHandler, Ap
   }
 
   private func getWindow() -> UIWindow {
+    #if os(macOS)
+    guard let window = NSApplication.shared.windows.first(where: { $0.isKeyWindow }) ?? NSApplication.shared.mainWindow else {
+      fatalError("Cannot find the current window.")
+    }
+    #else
     guard let window = UIApplication.shared.windows.filter(\.isKeyWindow).first ?? UIApplication.shared.delegate?.window as? UIWindow else {
       fatalError("Cannot find the current window.")
     }
+    #endif
     return window
   }
 }
